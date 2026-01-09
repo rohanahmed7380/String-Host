@@ -24,14 +24,14 @@ String is a professional-grade terminal hosting tool with built-in DNS, PHP supp
 ## Usage
 
 ```bash
-python main.py --path /your/project --domains "site.local, business.pk" --https
+python main.py --path /your/project --domains "site.local, business.pk"
 ```
 
 - `--path`: Project folder (contains `index.html` or `index.php`).
 - `--domains`: Comma-separated list of domains to catch.
-- `--webport`: (Optional) Default is 80.
+- `--webport`: (Optional) Default is 443 (HTTPS).
 - `--panelport`: (Optional) Default is 1947.
-- `--https`: (Optional) Enable self-signed HTTPS server.
+- `--https / --no-https`: Enable or disable HTTPS (Default: Enabled).
 
 ## Supported Domain Extensions
 
