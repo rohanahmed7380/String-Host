@@ -1,0 +1,7 @@
+flask
+flask-socketio
+dnslib
+click
+eventlet
+pyopenssl
+cryptography

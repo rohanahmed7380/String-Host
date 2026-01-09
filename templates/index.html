@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>String Advanced Panel</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
+    <style>
+        :root {
+            --bg: #030712;
+            --card: #111827;
+            --accent: #0ea5e9;
+            --danger: #ef4444;
+            --warning: #f59e0b;
+            --text: #f9fafb;
+            --muted: #9ca3af;
+        }
+
+        body {
+            font-family: 'Segoe UI', system-ui;
+            background: var(--bg);
+            color: var(--text);
+            margin: 0;
+            display: flex;
+            height: 100vh;
+        }
+
+        aside {
+            width: 300px;
+            background: var(--card);
+            border-right: 1px solid #1f2937;
+            padding: 20px;
+            overflow-y: auto;
+        }
+
+        main {
+            flex: 1;
+            padding: 20px;
+            overflow-y: auto;
+        }
+
+        h1 {
+            font-size: 1.5rem;
+            color: var(--accent);
+            margin-top: 0;
+            border-bottom: 2px solid var(--accent);
+            display: inline-block;
+        }
+
+        h2 {
+            font-size: 0.875rem;
+            color: var(--muted);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .stat-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin-bottom: 30px;
+        }
+
+        .stat-card {
+            background: #1f2937;
+            padding: 15px;
+            border-radius: 8px;
+        }
+
+        .stat-card div {
+            font-size: 1.25rem;
+            font-weight: bold;
+        }
+
+        .alert-item {
+            background: #18191b;
+            border-left: 4px solid var(--warning);
+            padding: 10px;
+            margin-bottom: 10px;
+            border-radius: 4px;
+            font-size: 0.85rem;
+        }
+
+        .alert-item.CRITICAL {
+            border-left-color: var(--danger);
+            background: rgba(239, 68, 68, 0.1);
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            background: var(--card);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        th {
+            text-align: left;
+            padding: 12px;
+            background: #1f2937;
+            color: var(--muted);
+            font-size: 0.8rem;
+        }
+
+        td {
+            padding: 12px;
+            border-top: 1px solid #1f2937;
+            font-size: 0.9rem;
+        }
+
+        .method {
+            padding: 3px 6px;
+            border-radius: 4px;
+            font-weight: bold;
+            font-size: 0.75rem;
+        }
+
+        .GET {
+            background: #064e3b;
+            color: #6ee7b7;
+        }
+
+        .POST {
+            background: #312e81;
+            color: #a5b4fc;
+        }
+
+        .btn {
+            background: var(--accent);
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            width: 100%;
+            margin-top: 10px;
+        }
+    </style>
+</head>
+
+<body>
+    <aside>
+        <h1>STRING</h1>
+        <div class="stat-grid">
+            <div class="stat-card">
+                <h2>Requests</h2>
+                <div id="count">0</div>
+            </div>
+            <div class="stat-card">
+                <h2>Alerts</h2>
+                <div id="alert-count">0</div>
+            </div>
+        </div>
+        <div>
+            <h2>Domain Info</h2>
+            <div id="domain-list" style="font-size: 0.85rem; color: var(--accent); margin-top: 5px;">
+                {% for d in domains %}
+                <div>{{ d }}</div>
+                {% endfor %}
+            </div>
+            <p style="font-size: 0.9rem; margin-top: 10px;">IP: {{ ip }}</p>
+        </div>
+        <button class="btn" onclick="socket.emit('refresh_traffic')">Clear Logs</button>
+
+        <h2 style="margin-top: 30px;">Security Alerts</h2>
+        <div id="alerts-container"></div>
+    </aside>
+
+    <main>
+        <h2>Live Traffic Monitor</h2>
+        <table>
+            <thead>
+                <tr>
+                    <th>Time</th>
+                    <th>Method</th>
+                    <th>Path</th>
+                    <th>Address</th>
+                    <th>Code</th>
+                </tr>
+            </thead>
+            <tbody id="logs"></tbody>
+        </table>
+    </main>
+
+    <script>
+        const socket = io('/panel');
+        const logs = document.getElementById('logs');
+        const alertContainer = document.getElementById('alerts-container');
+        let rCount = 0;
+        let aCount = 0;
+
+        socket.on('new_log', (log) => {
+            const row = `<tr><td>${log.time}</td><td><span class="method ${log.method}">${log.method}</span></td><td>${log.path}</td><td>${log.ip}</td><td>${log.status}</td></tr>`;
+            logs.insertAdjacentHTML('afterbegin', row);
+            rCount++;
+            document.getElementById('count').innerText = rCount;
+        });
+
+        socket.on('init_logs', (data) => {
+            logs.innerHTML = '';
+            rCount = 0;
+            data.forEach(log => {
+                const row = `<tr><td>${log.time}</td><td><span class="method ${log.method}">${log.method}</span></td><td>${log.path}</td><td>${log.ip}</td><td>${log.status}</td></tr>`;
+                logs.insertAdjacentHTML('afterbegin', row);
+                rCount++;
+            });
+            document.getElementById('count').innerText = rCount;
+        });
+
+        socket.on('security_alert', (alert) => {
+            const div = `<div class="alert-item ${alert.type}"><strong>[${alert.time}]</strong> ${alert.message}</div>`;
+            alertContainer.insertAdjacentHTML('afterbegin', div);
+            aCount++;
+            document.getElementById('alert-count').innerText = aCount;
+        });
+
+        socket.on('init_alerts', (data) => {
+            alertContainer.innerHTML = '';
+            aCount = 0;
+            data.forEach(alert => {
+                const div = `<div class="alert-item ${alert.type}"><strong>[${alert.time}]</strong> ${alert.message}</div>`;
+                alertContainer.insertAdjacentHTML('afterbegin', div);
+                aCount++;
+            });
+            document.getElementById('alert-count').innerText = aCount;
+        });
+    </script>
+</body>
+
+</html>
